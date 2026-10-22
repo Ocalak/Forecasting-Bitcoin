@@ -27,11 +27,21 @@ Lag orders are chosen with the **Akaike Information Criterion (AIC)**, relations
 
 | Variable | Description | Source |
 |----------|-------------|--------|
-| `BTC` | Bitcoin growth rate (from price, aggregated with geometric mean) | [CoinMarketCap](https://coinmarketcap.com/currencies/bitcoin/) |
-| `UNEMP` | US unemployment rate | [FRED](https://research.stlouisfed.org/econ/mccracken/fred-databases) |
-| `INF` | US inflation rate (growth rate of CPI) | FRED |
-| `FEDF` | US federal funds rate | FRED |
-| `SP500` | S&P 500 growth rate | FRED |
+| `BTC` | Bitcoin growth rate, from weekly closing prices aggregated to monthly and quarterly frequency with the geometric mean | [CoinMarketCap](https://coinmarketcap.com/currencies/bitcoin/) (`btc_qd.csv`) |
+| `UNEMP` | US unemployment rate (`UNRATE`) | FRED-QD / FRED-MD |
+| `INF` | US inflation rate (growth rate of `CPIAUCSL`) | FRED-QD / FRED-MD |
+| `FEDF` | US federal funds rate (`FEDFUNDS`) | FRED-QD / FRED-MD |
+| `SP500` | S&P 500 growth rate | FRED-QD / FRED-MD |
+
+**Data files in this repository**
+
+| File | Content |
+|------|---------|
+| `btc_qd.csv` | Weekly Bitcoin prices (semicolon-separated, CoinMarketCap export) |
+| `current-3.csv` | FRED-QD quarterly macro dataset |
+| `current-4.csv` | FRED-MD monthly macro dataset ([current.csv](https://files.stlouisfed.org/files/htdocs/fred-md/monthly/current.csv)) |
+
+FRED databases: <https://research.stlouisfed.org/econ/mccracken/fred-databases>
 
 **Sample**
 - Quarterly: 2010Q4 to 2022Q4 (49 observations)
@@ -109,31 +119,41 @@ Bitcoin prices were first converted to monthly and quarterly frequency with the 
 
 ## Repository structure
 
-> Adjust this to match your actual files.
-
-```
-.
-├── data/              # Raw and transformed quarterly / monthly datasets
-├── R/                 # Scripts: preprocessing, AR, VAR, U-MIDAS, evaluation
-├── figures/           # Plots used in the report
-├── reportfinal.pdf    # Full written report
-└── README.md
-```
+| File | Purpose |
+|------|---------|
+| `1.DataColl-Transformation.R` | Loads the raw CSVs, computes growth rates, converts weekly BTC prices to monthly and quarterly (geometric mean), builds the quarterly (`data_qd`) and monthly (`data_md`) datasets and the lagged regressors for U-MIDAS |
+| `2.AR.R` | AR(1) benchmark on quarterly data |
+| `3.VAR(1).R` | VAR(1) on quarterly data, including the Granger causality tests |
+| `4.VAR3.R` | VAR(3) on quarterly data (lag chosen by AIC) |
+| `5.UMIDAS.R` | U-MIDAS models: full and reduced specification |
+| `6.VAR_Monthly.R` | VAR(p) on monthly data |
+| `btc_qd.csv` | Weekly Bitcoin prices |
+| `current-3.csv` | FRED-QD quarterly macro data |
+| `current-4.csv` | FRED-MD monthly macro data |
+| `reportfinal.pdf` | Full written report with all figures and tables |
 
 ## Getting started
 
 ```bash
-git clone https://github.com/Ocalak/<repo-name>.git
-cd <repo-name>
+git clone https://github.com/Ocalak/Forecasting-Bitcoin.git
+cd Forecasting-Bitcoin
 ```
 
-Typical R packages for this kind of analysis (update to match your scripts):
+**Packages** loaded in `1.DataColl-Transformation.R`:
 
 ```r
-install.packages(c("vars", "tseries", "lmtest", "forecast", "zoo"))
+install.packages(c(
+  "lubridate", "dplyr", "quantmod", "readr", "EnvStats", "tidyverse",
+  "readxl", "forecast", "vars", "tseries", "midasr", "data.table",
+  "olsrr", "imputeTS"
+))
 ```
 
-Then run the scripts in `R/` in order: data preparation, then models, then evaluation.
+**Running the analysis**
+
+1. Run the scripts in numeric order in one R session. Later scripts use objects created by script 1 (`data_qd`, `data_md`, `data_ts`, the U-MIDAS regressors).
+2. Script 1 reads the CSVs from `~/Downloads/`. Either copy the three CSV files there or change the paths to the repository folder, for example `read.csv("current-3.csv")`.
+3. Script 1 selects rows by fixed position (for example `UNEMP[210:259]` for the quarterly sample 2010Q4 to 2022Q4). If you update the FRED files, these indices must be adjusted.
 
 ## References
 
